@@ -1,14 +1,33 @@
 from math import sqrt
 import tkinter as tk
 
-class InputHandler:
+class InputEvent:
+    MOUSE_LEFT = 1
+    MOUSE_RIGHT = 3
+
+class GameEvent:
     def __init__(self) -> None:
+        pass
+
+class MouseEvent(GameEvent):
+    def __init__(self, pos_x:int=None, pos_y:int=None, button:int=None, dragging:bool=None) -> None:
+        self.pos_x = pos_x
+        self.pos_y = pos_y
+        self.button = button
+        self.dragging = dragging
+
+class InputHandler:
+    def __init__(self, callback) -> None:
         self.__dragging = False
+        self.__button = None
+        self.callback = callback
 
     def on_mouse_move(self, event:tk.Event) -> None:
-        print(f"Mouse: ({event.x}, {event.y})")
-        
+        game_event = MouseEvent(pos_x=event.x, pos_y=event.y, button=self.__button, dragging=self.__dragging)
+        self.callback(game_event)
+
     def on_mouse_down(self, event:tk.Event) -> None:
+        self.__button = event.num
         self.__dragging = True
 
     def on_mouse_release(self, event:tk.Event) -> None:
@@ -19,7 +38,7 @@ class Game(tk.Tk):
         super().__init__()
 
         # variables
-        self.input_handler = InputHandler()
+        self.input_handler = InputHandler(self.on_game_event)
         self.window_width = window_width
         self.window_height = window_height
         self.rect_count = 500
@@ -31,6 +50,19 @@ class Game(tk.Tk):
 
         # callbacks
         self.bind("<Configure>", self.on_window_update)
+
+    def on_game_event(self, event:GameEvent):
+        if type(event) == MouseEvent:
+            if not event.dragging:
+                return
+            
+            rect_id, = self.canvas.find_closest(event.pos_x, event.pos_y)
+            
+            if event.button == InputEvent.MOUSE_LEFT:
+                self.canvas.itemconfig(rect_id, fill="red")
+
+            if event.button == InputEvent.MOUSE_RIGHT:
+                self.canvas.itemconfig(rect_id, fill="white")
 
     def on_window_update(self, event:tk.Event):
         self.window_width = event.width
@@ -81,9 +113,9 @@ class Game(tk.Tk):
                 self.rectid_arr.append(rect_id)
 
         # bind input callbacks
-        self.canvas.bind("<B1-Motion>", self.input_handler.on_mouse_move)
-        self.canvas.bind("<Button-1>", self.input_handler.on_mouse_down)
-        self.canvas.bind("<ButtonRelease-1>", self.input_handler.on_mouse_release)
+        self.canvas.bind("<Motion>", self.input_handler.on_mouse_move)
+        self.canvas.bind("<Button>", self.input_handler.on_mouse_down)
+        self.canvas.bind("<ButtonRelease>", self.input_handler.on_mouse_release)
 
         # pack canvas
         self.canvas.pack()
