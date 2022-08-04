@@ -65,6 +65,11 @@ class Game(tk.Tk):
                 self.canvas.itemconfig(rect_id, fill="white")
 
     def on_window_update(self, event:tk.Event):
+        min_pixel_diff = 5
+        if abs(self.window_height - event.height) < min_pixel_diff and abs(self.window_width - event.width) < min_pixel_diff:
+            return
+        
+        # update window size
         self.window_width = event.width
         self.window_height = event.height
 
