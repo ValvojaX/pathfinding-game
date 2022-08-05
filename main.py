@@ -41,6 +41,7 @@ class Game(tk.Tk):
         self.input_handler = InputHandler(self.on_game_event)
         self.window_width = window_width
         self.window_height = window_height
+        self.control_panel_size = 0.30
         self.rect_count = 500
         self.canvas = None
         self.rectid_arr = []
@@ -65,6 +66,11 @@ class Game(tk.Tk):
                 self.canvas.itemconfig(rect_id, fill="white")
 
     def on_window_update(self, event:tk.Event):
+        # filter other events
+        if event.widget != self:
+            return
+
+        # optimize updating
         min_pixel_diff = 5
         if abs(self.window_height - event.height) < min_pixel_diff and abs(self.window_width - event.width) < min_pixel_diff:
             return
@@ -73,15 +79,19 @@ class Game(tk.Tk):
         self.window_width = event.width
         self.window_height = event.height
 
+        # calculate space for controls
+        canvas_width = self.window_width
+        canvas_height = self.window_height - (self.window_height * self.control_panel_size)
+
         # change canvas size
-        self.canvas.config(width=self.window_width, height=self.window_height)
+        self.canvas.config(width=canvas_width, height=canvas_height)
 
         # calculate row and column count
         rects_per_side = int(sqrt(len(self.rectid_arr)))
 
         # calculate rectangle size
-        rect_width = self.window_width / rects_per_side
-        rect_height = self.window_height / rects_per_side
+        rect_width = canvas_width / rects_per_side
+        rect_height = canvas_height / rects_per_side
 
         # update grid
         for row in range(rects_per_side):
@@ -101,15 +111,19 @@ class Game(tk.Tk):
         # resize window
         super().geometry(f"{self.window_width}x{self.window_height}+{center_x}+{center_y}")
 
+        # calculate space for controls
+        canvas_width = self.window_width
+        canvas_height = self.window_height - (self.window_height * self.control_panel_size)
+
         # create canvas
-        self.canvas = tk.Canvas(self, bg="black", width=self.window_width, height=self.window_height)
+        self.canvas = tk.Canvas(self, bg="black", width=canvas_width, height=canvas_height)
         
         # calculate row and column count
         rects_per_side = int(sqrt(self.rect_count))
 
         # calculate rectangle size
-        rect_width = self.window_width / rects_per_side
-        rect_height = self.window_height / rects_per_side
+        rect_width = canvas_width / rects_per_side
+        rect_height = canvas_height / rects_per_side
 
         # create grid
         for row in range(rects_per_side):
@@ -129,5 +143,5 @@ class Game(tk.Tk):
         super().mainloop()
 
 if __name__ == "__main__":
-    game = Game(window_width=800, window_height=600)
+    game = Game(window_width=600, window_height=700)
     game.run()
