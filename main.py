@@ -1,5 +1,6 @@
 from math import sqrt
 import tkinter as tk
+from tkinter import messagebox
 
 class InputEvent:
     MOUSE_LEFT = 1
@@ -29,6 +30,9 @@ class InputHandler:
     def on_mouse_down(self, event:tk.Event) -> None:
         self.__button = event.num
         self.__dragging = True
+        
+        game_event = MouseEvent(pos_x=event.x, pos_y=event.y, button=self.__button, dragging=self.__dragging)
+        self.callback(game_event)
 
     def on_mouse_release(self, event:tk.Event) -> None:
         self.__dragging = False
@@ -41,10 +45,15 @@ class Game(tk.Tk):
         self.input_handler = InputHandler(self.on_game_event)
         self.window_width = window_width
         self.window_height = window_height
-        self.control_panel_size = 0.30
+        self.control_panel_size = 0.15
         self.rect_count = 500
-        self.canvas = None
         self.rectid_arr = []
+        self.start_rect = None
+        self.end_rect = None
+
+        # window objects
+        self.canvas = None
+        self.start_button = None
 
         # initialize
         self.__initialize()
@@ -58,11 +67,29 @@ class Game(tk.Tk):
                 return
             
             rect_id, = self.canvas.find_closest(event.pos_x, event.pos_y)
-            
             if event.button == InputEvent.MOUSE_LEFT:
+                if rect_id in [self.start_rect, self.end_rect]:
+                    return
+
+                if self.start_rect is None:
+                    self.canvas.itemconfig(rect_id, fill="green")
+                    self.start_rect = rect_id
+                    return
+
+                if self.end_rect is None:
+                    self.canvas.itemconfig(rect_id, fill="green")
+                    self.end_rect = rect_id
+                    return
+
                 self.canvas.itemconfig(rect_id, fill="red")
 
             if event.button == InputEvent.MOUSE_RIGHT:
+                if rect_id == self.start_rect:
+                    self.start_rect = None
+
+                if rect_id == self.end_rect:
+                    self.end_rect = None
+
                 self.canvas.itemconfig(rect_id, fill="white")
 
     def on_window_update(self, event:tk.Event):
@@ -99,6 +126,13 @@ class Game(tk.Tk):
                 rect_id = self.rectid_arr[rects_per_side * row + col]
                 self.canvas.coords(rect_id, rect_width * row, rect_height * col, rect_width * (row + 1), rect_height * (col + 1))
 
+        # calculate new position for start button
+        self.start_button.width = 0.3 * self.window_width
+        self.start_button.height = 0.08 * self.window_height
+        start_button_pos_x = self.window_width / 2 - self.start_button.width / 2
+        start_button_pos_y = self.window_height - self.window_height * self.control_panel_size / 2 - self.start_button.height / 2
+        self.start_button.place(x=start_button_pos_x, y=start_button_pos_y, height=self.start_button.height, width=self.start_button.width)
+
     def __initialize(self):
         # get screen size
         screen_width = super().winfo_screenwidth()
@@ -126,8 +160,8 @@ class Game(tk.Tk):
         rect_height = canvas_height / rects_per_side
 
         # create grid
-        for row in range(rects_per_side):
-            for col in range(rects_per_side):
+        for col in range(rects_per_side):
+            for row in range(rects_per_side):
                 rect_id = self.canvas.create_rectangle(rect_width * row, rect_height * col, rect_width * (row + 1), rect_height * (col + 1), fill="white")
                 self.rectid_arr.append(rect_id)
 
@@ -136,8 +170,22 @@ class Game(tk.Tk):
         self.canvas.bind("<Button>", self.input_handler.on_mouse_down)
         self.canvas.bind("<ButtonRelease>", self.input_handler.on_mouse_release)
 
+        # create start button
+        self.start_button = tk.Button(self, text="START", command=self.start_game)
+
+        # calculate size and position, add button
+        self.start_button.width = 0.3 * self.window_width
+        self.start_button.height = 0.08 * self.window_height
+        start_button_pos_x = self.window_width / 2 - self.start_button.width / 2
+        start_button_pos_y = self.window_height - self.window_height * self.control_panel_size / 2 - self.start_button.height / 2
+        self.start_button.place(x=start_button_pos_x, y=start_button_pos_y, height=self.start_button.height, width=self.start_button.width)
+
         # pack canvas
         self.canvas.pack()
+
+    def start_game(self):
+        if self.start_rect is None or self.end_rect is None:
+            messagebox.showerror("Game error", "Please select a starting point and an ending point by right clicking empty rectangles.")
 
     def run(self) -> None:
         super().mainloop()
