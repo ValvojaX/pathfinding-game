@@ -54,6 +54,8 @@ class Game(tk.Tk):
         # window objects
         self.canvas = None
         self.start_button = None
+        self.start_rect_text = None
+        self.end_rect_text = None
 
         # initialize
         self.__initialize()
@@ -68,27 +70,48 @@ class Game(tk.Tk):
             
             rect_id, = self.canvas.find_closest(event.pos_x, event.pos_y)
             if event.button == InputEvent.MOUSE_LEFT:
-                if rect_id in [self.start_rect, self.end_rect]:
+                if rect_id in [self.start_rect, self.end_rect, self.start_rect_text, self.end_rect_text]:
                     return
 
                 if self.start_rect is None:
                     self.canvas.itemconfig(rect_id, fill="green")
                     self.start_rect = rect_id
+                    
+                    # add text
+                    x0, y0, x1, y1 = self.canvas.coords(rect_id)
+                    center = x0 + (x1 - x0) / 2, y0 + (y1 - y0) / 2
+                    font_size = min((x1 - x0), (y1 - y0)) / 2
+                    self.start_rect_text = self.canvas.create_text(center[0], center[1], text="S", fill="black", font=('Helvetica', str(int(font_size)), 'bold'))
                     return
 
                 if self.end_rect is None:
                     self.canvas.itemconfig(rect_id, fill="green")
                     self.end_rect = rect_id
+
+                    # add text
+                    x0, y0, x1, y1 = self.canvas.coords(rect_id)
+                    center = x0 + (x1 - x0) / 2, y0 + (y1 - y0) / 2
+                    font_size = min((x1 - x0), (y1 - y0)) / 2
+                    self.end_rect_text = self.canvas.create_text(center[0], center[1], text="E", fill="black", font=('Helvetica', str(int(font_size)), 'bold'))
                     return
 
                 self.canvas.itemconfig(rect_id, fill="red")
 
             if event.button == InputEvent.MOUSE_RIGHT:
-                if rect_id == self.start_rect:
-                    self.start_rect = None
+                if rect_id in [self.start_rect, self.start_rect_text]:
+                    self.canvas.delete(self.start_rect_text)
+                    self.canvas.itemconfig(self.start_rect, fill="white")
 
-                if rect_id == self.end_rect:
+                    self.start_rect = None
+                    self.start_rect_text = None
+                    
+
+                if rect_id in [self.end_rect, self.end_rect_text]:
+                    self.canvas.delete(self.end_rect_text)
+                    self.canvas.itemconfig(self.end_rect, fill="white")
+
                     self.end_rect = None
+                    self.end_rect_text = None
 
                 self.canvas.itemconfig(rect_id, fill="white")
 
@@ -132,6 +155,23 @@ class Game(tk.Tk):
         start_button_pos_x = self.window_width / 2 - self.start_button.width / 2
         start_button_pos_y = self.window_height - self.window_height * self.control_panel_size / 2 - self.start_button.height / 2
         self.start_button.place(x=start_button_pos_x, y=start_button_pos_y, height=self.start_button.height, width=self.start_button.width)
+
+        # calculate new position and size for start and end texts
+        if self.start_rect_text is not None:
+            x0, y0, x1, y1 = self.canvas.coords(self.start_rect)
+            center = x0 + (x1 - x0) / 2, y0 + (y1 - y0) / 2
+            font_size = min((x1 - x0), (y1 - y0)) / 2
+
+            self.canvas.coords(self.start_rect_text, center[0], center[1])
+            self.canvas.itemconfig(self.start_rect_text, text="S", fill="black", font=('Helvetica', str(int(font_size)), 'bold'))
+
+        if self.end_rect_text is not None:
+            x0, y0, x1, y1 = self.canvas.coords(self.end_rect)
+            center = x0 + (x1 - x0) / 2, y0 + (y1 - y0) / 2
+            font_size = min((x1 - x0), (y1 - y0)) / 2
+
+            self.canvas.coords(self.end_rect_text, center[0], center[1])
+            self.canvas.itemconfig(self.end_rect_text, text="E", fill="black", font=('Helvetica', str(int(font_size)), 'bold'))
 
     def __initialize(self):
         # get screen size
