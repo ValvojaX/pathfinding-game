@@ -146,7 +146,7 @@ class Game(tk.Tk):
         # update grid
         for row in range(rects_per_side):
             for col in range(rects_per_side):
-                rect_id = self.rectid_arr[rects_per_side * row + col]
+                rect_id = self.rectid_arr[rects_per_side * col + row]
                 self.canvas.coords(rect_id, rect_width * row, rect_height * col, rect_width * (row + 1), rect_height * (col + 1))
 
         # calculate new position for start button
