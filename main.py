@@ -37,6 +37,19 @@ class InputHandler:
     def on_mouse_release(self, event:tk.Event) -> None:
         self.__dragging = False
 
+class Pathfinding:
+    def __init__(self) -> None:
+        pass
+
+    def search_a_star(self) -> None:
+        pass
+    
+    def search_depth(self) -> None:
+        pass
+
+    def search_breadth(self) -> None:
+        pass
+
 class Game(tk.Tk):
     def __init__(self, window_width:int=960, window_height:int=720) -> None:
         super().__init__()
@@ -63,7 +76,7 @@ class Game(tk.Tk):
         # callbacks
         self.bind("<Configure>", self.on_window_update)
 
-    def on_game_event(self, event:GameEvent):
+    def on_game_event(self, event:GameEvent) -> None:
         if type(event) == MouseEvent:
             if not event.dragging:
                 return
@@ -115,7 +128,7 @@ class Game(tk.Tk):
 
                 self.canvas.itemconfig(rect_id, fill="white")
 
-    def on_window_update(self, event:tk.Event):
+    def on_window_update(self, event:tk.Event) -> None:
         # filter other events
         if event.widget != self:
             return
@@ -173,7 +186,7 @@ class Game(tk.Tk):
             self.canvas.coords(self.end_rect_text, center[0], center[1])
             self.canvas.itemconfig(self.end_rect_text, text="E", fill="black", font=('Helvetica', str(int(font_size)), 'bold'))
 
-    def __initialize(self):
+    def __initialize(self) -> None:
         # get screen size
         screen_width = super().winfo_screenwidth()
         screen_height = super().winfo_screenheight()
@@ -223,7 +236,7 @@ class Game(tk.Tk):
         # pack canvas
         self.canvas.pack()
 
-    def start_game(self):
+    def start_game(self) -> None:
         if self.start_rect is None or self.end_rect is None:
             messagebox.showerror("Game error", "Please select a starting point and an ending point by right clicking empty rectangles.")
 
