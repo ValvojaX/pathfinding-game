@@ -1,4 +1,5 @@
 from math import sqrt
+import time
 import tkinter as tk
 from tkinter import messagebox
 
@@ -37,18 +38,83 @@ class InputHandler:
     def on_mouse_release(self, event:tk.Event) -> None:
         self.__dragging = False
 
-class Pathfinding:
-    def __init__(self) -> None:
-        pass
+class Stack:
+    def __init__(self, arr_items:list=[]) -> None:
+        self.array = arr_items
 
-    def search_a_star(self) -> None:
+    def add(self, obj) -> None:
+        self.array.insert(0, obj)
+
+    def pop(self):
+        return self.array.pop(0)
+
+    def is_empty(self) -> bool:
+        return len(self.array) == 0
+
+class Queue:
+    def __init__(self, arr_items:list=[]) -> None:
+        self.array = arr_items
+
+    def add(self, obj) -> None:
+        self.array.append(obj)
+
+    def pop(self):
+        return self.array.pop(0)
+
+    def is_empty(self) -> bool:
+        return len(self.array) == 0
+
+class Pathfinding:
+    @staticmethod
+    def search_a_star(start_index:int, end_index:int, blacklist:list[int], arr_size:int) -> list[int]:
         pass
     
-    def search_depth(self) -> None:
+    @staticmethod
+    def search_depth(start_index:int, end_index:int, blacklist:list[int], arr_size:int) -> list[int]:
         pass
 
-    def search_breadth(self) -> None:
-        pass
+    @staticmethod
+    def search_breadth(start_index:int, end_index:int, arr_size:int, blacklist:list[int]) -> list[int]:
+        result = []
+        arr = Queue([start_index])
+        arr_side = int(sqrt(arr_size))
+
+        while arr.is_empty() == False:
+            index = arr.pop()
+            if index in result:
+                continue
+            result.append(index)
+
+            # rects next to current rect
+            rect_right = index + 1
+            rect_left = index - 1
+            rect_up = index - arr_side
+            rect_down = index + arr_side
+
+            # move right
+            on_right_side = float((index) / (arr_side)).is_integer()
+            if on_right_side == False and rect_right not in blacklist:
+                arr.add(rect_right)
+
+            # move left
+            on_left_side = rect_left % arr_side == 0
+            if on_left_side == False and rect_left not in blacklist:
+                arr.add(rect_left)
+
+            # move up
+            on_up_side = index < (arr_side - 1)
+            if on_up_side == False and rect_up not in blacklist:
+                arr.add(rect_up)
+
+            # move down
+            on_down_side = index >= pow(arr_side, exp=2) - arr_side
+            if on_down_side == False and rect_down not in blacklist:
+                arr.add(rect_down)
+
+            if index == end_index:
+                break
+
+        return result
 
 class Game(tk.Tk):
     def __init__(self, window_width:int=960, window_height:int=720) -> None:
@@ -80,7 +146,7 @@ class Game(tk.Tk):
         if type(event) == MouseEvent:
             if not event.dragging:
                 return
-            
+
             rect_id, = self.canvas.find_closest(event.pos_x, event.pos_y)
             if event.button == InputEvent.MOUSE_LEFT:
                 if rect_id in [self.start_rect, self.end_rect, self.start_rect_text, self.end_rect_text]:
@@ -117,7 +183,6 @@ class Game(tk.Tk):
 
                     self.start_rect = None
                     self.start_rect_text = None
-                    
 
                 if rect_id in [self.end_rect, self.end_rect_text]:
                     self.canvas.delete(self.end_rect_text)
@@ -239,6 +304,19 @@ class Game(tk.Tk):
     def start_game(self) -> None:
         if self.start_rect is None or self.end_rect is None:
             messagebox.showerror("Game error", "Please select a starting point and an ending point by right clicking empty rectangles.")
+        else:
+            blacklist = []
+            for item_id in self.rectid_arr:
+                color = self.canvas.itemconfig(item_id)["fill"][4]
+                if color == "red":
+                    blacklist.append(item_id)
+
+            path = Pathfinding.search_breadth(self.start_rect, self.end_rect, len(self.rectid_arr), blacklist)
+
+            for rect in path:
+                self.canvas.itemconfig(rect, fill="blue")
+                self.update()
+                time.sleep(0.05)
 
     def run(self) -> None:
         super().mainloop()
