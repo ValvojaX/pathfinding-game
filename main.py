@@ -127,6 +127,7 @@ class Game(tk.Tk):
         self.control_panel_size = 0.15
         self.rect_count = 500
         self.rectid_arr = []
+        self.is_searching = False
         self.start_rect = None
         self.end_rect = None
 
@@ -147,11 +148,25 @@ class Game(tk.Tk):
             if not event.dragging:
                 return
 
+            # stop searching if obstacles states are changed
+            if event.button in [InputEvent.MOUSE_LEFT, InputEvent.MOUSE_RIGHT]:
+                self.is_searching = False
+                for rect in self.rectid_arr:
+                    color = self.canvas.itemconfig(rect)["fill"][4]
+                    if color == "blue":
+                        self.canvas.itemconfig(rect, fill="white")
+                
+                if self.start_rect is not None:
+                    self.canvas.itemconfig(self.start_rect, fill="green")
+                if self.end_rect is not None:
+                    self.canvas.itemconfig(self.end_rect, fill="green")
+
             rect_id, = self.canvas.find_closest(event.pos_x, event.pos_y)
             if event.button == InputEvent.MOUSE_LEFT:
                 if rect_id in [self.start_rect, self.end_rect, self.start_rect_text, self.end_rect_text]:
                     return
 
+                # handle adding start rect
                 if self.start_rect is None:
                     self.canvas.itemconfig(rect_id, fill="green")
                     self.start_rect = rect_id
@@ -163,6 +178,7 @@ class Game(tk.Tk):
                     self.start_rect_text = self.canvas.create_text(center[0], center[1], text="S", fill="black", font=('Helvetica', str(int(font_size)), 'bold'))
                     return
 
+                # handle adding end rect
                 if self.end_rect is None:
                     self.canvas.itemconfig(rect_id, fill="green")
                     self.end_rect = rect_id
@@ -177,6 +193,7 @@ class Game(tk.Tk):
                 self.canvas.itemconfig(rect_id, fill="red")
 
             if event.button == InputEvent.MOUSE_RIGHT:
+                self.is_searching = False
                 if rect_id in [self.start_rect, self.start_rect_text]:
                     self.canvas.delete(self.start_rect_text)
                     self.canvas.itemconfig(self.start_rect, fill="white")
@@ -301,22 +318,56 @@ class Game(tk.Tk):
         # pack canvas
         self.canvas.pack()
 
+    def clear_game(self) -> None:
+        self.is_searching = False
+        for item_id in self.rectid_arr:
+            self.canvas.itemconfig(item_id, fill="white")
+
+            if self.start_rect is not None:
+                self.canvas.delete(self.start_rect_text)
+                self.start_rect = None
+                self.start_rect_text = None
+
+            if self.end_rect is not None:
+                self.canvas.delete(self.end_rect_text)
+                self.end_rect = None
+                self.end_rect_text = None
+
+        self.start_button.config(text="START")
+            
     def start_game(self) -> None:
         if self.start_rect is None or self.end_rect is None:
             messagebox.showerror("Game error", "Please select a starting point and an ending point by right clicking empty rectangles.")
-        else:
-            blacklist = []
-            for item_id in self.rectid_arr:
-                color = self.canvas.itemconfig(item_id)["fill"][4]
-                if color == "red":
-                    blacklist.append(item_id)
+            return
 
-            path = Pathfinding.search_breadth(self.start_rect, self.end_rect, len(self.rectid_arr), blacklist)
+        # handle clear
+        if self.is_searching:
+            self.clear_game()
+            return
 
-            for rect in path:
-                self.canvas.itemconfig(rect, fill="blue")
-                self.update()
-                time.sleep(0.05)
+        blacklist = []
+        for item_id in self.rectid_arr:
+            color = self.canvas.itemconfig(item_id)["fill"][4]
+            if color == "red":
+                blacklist.append(item_id)
+
+            if color == "blue":
+                self.canvas.itemconfig(item_id, fill="white")
+
+        self.is_searching = True
+        self.start_button.config(text="CLEAR")
+        path = Pathfinding.search_breadth(self.start_rect, self.end_rect, len(self.rectid_arr), blacklist)
+
+        for rect in path:
+            if self.is_searching == False: # if clear is pressed or obstacles are changed, stop adding blue rects                    
+                break
+            
+            self.canvas.itemconfig(rect, fill="blue")
+            self.update()
+            time.sleep(0.01)
+
+        self.is_searching = False
+        self.start_button.config(text="START")
 
     def run(self) -> None:
         super().mainloop()
