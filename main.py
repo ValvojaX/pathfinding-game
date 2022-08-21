@@ -1,7 +1,7 @@
 from math import sqrt
 import time
 import tkinter as tk
-from tkinter import messagebox
+from tkinter import messagebox, ttk
 
 class InputEvent:
     MOUSE_LEFT = 1
@@ -271,6 +271,9 @@ class Game(tk.Tk):
         # window objects
         self.canvas = None
         self.start_button = None
+        self.algo_menu = None
+        self.clear_button = None
+
         self.start_rect_text = None
         self.end_rect_text = None
 
@@ -381,12 +384,7 @@ class Game(tk.Tk):
                 rect_id = self.rectid_arr[rects_per_side * col + row]
                 self.canvas.coords(rect_id, rect_width * row, rect_height * col, rect_width * (row + 1), rect_height * (col + 1))
 
-        # calculate new position for start button
-        self.start_button.width = 0.3 * self.window_width
-        self.start_button.height = 0.08 * self.window_height
-        start_button_pos_x = self.window_width / 2 - self.start_button.width / 2
-        start_button_pos_y = self.window_height - self.window_height * self.control_panel_size / 2 - self.start_button.height / 2
-        self.start_button.place(x=start_button_pos_x, y=start_button_pos_y, height=self.start_button.height, width=self.start_button.width)
+        self.calculate_size_and_pos()
 
         # calculate new position and size for start and end texts
         if self.start_rect_text is not None:
@@ -442,18 +440,56 @@ class Game(tk.Tk):
         self.canvas.bind("<Button>", self.input_handler.on_mouse_down)
         self.canvas.bind("<ButtonRelease>", self.input_handler.on_mouse_release)
 
-        # create start button
+        # create menu items
         self.start_button = tk.Button(self, text="START", command=self.start_game)
+        self.start_button.pack()
 
-        # calculate size and position, add button
-        self.start_button.width = 0.3 * self.window_width
-        self.start_button.height = 0.08 * self.window_height
-        start_button_pos_x = self.window_width / 2 - self.start_button.width / 2
-        start_button_pos_y = self.window_height - self.window_height * self.control_panel_size / 2 - self.start_button.height / 2
-        self.start_button.place(x=start_button_pos_x, y=start_button_pos_y, height=self.start_button.height, width=self.start_button.width)
+        menu_options = ["A*", "BFS", "DFS"]
+        algo_menu_text = tk.StringVar()
+        algo_menu_text.set(menu_options[0])
+        self.algo_menu = tk.OptionMenu(self, algo_menu_text, *menu_options)
+        self.algo_menu.text = algo_menu_text
+        self.algo_menu.pack()
+
+        self.speed_slider = ttk.Scale(self, from_=0.0, to=0.1, orient="horizontal")
+        self.speed_slider.set(0.05)
+        self.speed_slider.pack()
+
+        self.clear_button = tk.Button(self, text="CLEAR", command=self.clear_game)
+        self.clear_button.pack()
+
+        self.calculate_size_and_pos()
 
         # pack canvas
         self.canvas.pack()
+
+    def calculate_size_and_pos(self):
+        # calculate size and position for items
+        self.start_button.width = 0.3 * self.window_width
+        self.start_button.height = 0.08 * self.window_height
+        self.start_button.x = self.window_width / 5 - self.start_button.width / 2
+        self.start_button.y = self.window_height - self.window_height * self.control_panel_size / 2 - self.start_button.height / 2
+
+        self.algo_menu.width = 0.2 * self.window_width
+        self.algo_menu.height = 0.04 * self.window_height
+        self.algo_menu.x = self.window_width / 2 - self.algo_menu.width / 2
+        self.algo_menu.y = self.start_button.y
+
+        self.speed_slider.width = 0.2 * self.window_width
+        self.speed_slider.height = 0.03 * self.window_height
+        self.speed_slider.x = self.window_width / 2 - self.speed_slider.width / 2
+        self.speed_slider.y = self.start_button.y + self.start_button.height / 2 + 5
+        
+        self.clear_button.width = 0.3 * self.window_width
+        self.clear_button.height = 0.08 * self.window_height
+        self.clear_button.x = self.window_width - self.window_width / 5 - self.clear_button.width / 2
+        self.clear_button.y = self.start_button.y
+
+        # place items
+        self.start_button.place(x=self.start_button.x, y=self.start_button.y, height=self.start_button.height, width=self.start_button.width)
+        self.algo_menu.place(x=self.algo_menu.x, y=self.algo_menu.y, height=self.algo_menu.height, width=self.algo_menu.width)
+        self.speed_slider.place(x=self.speed_slider.x, y=self.speed_slider.y, height=self.speed_slider.height, width=self.speed_slider.width)
+        self.clear_button.place(x=self.clear_button.x, y=self.clear_button.y, height=self.clear_button.height, width=self.clear_button.width)
 
     def clear_game(self) -> None:
         self.is_searching = False
@@ -469,17 +505,13 @@ class Game(tk.Tk):
                 self.canvas.delete(self.end_rect_text)
                 self.end_rect = None
                 self.end_rect_text = None
-
-        self.start_button.config(text="START")
             
     def start_game(self) -> None:
         if self.start_rect is None or self.end_rect is None:
             messagebox.showerror("Game error", "Please select a starting point and an ending point by right clicking empty rectangles.")
             return
 
-        # handle clear
         if self.is_searching:
-            self.clear_game()
             return
 
         blacklist = []
@@ -491,20 +523,27 @@ class Game(tk.Tk):
             if color == "blue":
                 self.canvas.itemconfig(item_id, fill="white")
 
+        self.canvas.itemconfig(self.start_rect, fill="green")
+        self.canvas.itemconfig(self.end_rect, fill="green")
         self.is_searching = True
-        self.start_button.config(text="CLEAR")
-        path = Pathfinding.search_a_star(self.start_rect, self.end_rect, len(self.rectid_arr), blacklist)
 
+        path = []
+        if self.algo_menu.text.get() == "A*":
+            path = Pathfinding.search_a_star(self.start_rect, self.end_rect, len(self.rectid_arr), blacklist)
+        if self.algo_menu.text.get() == "BFS":
+            path = Pathfinding.search_breadth(self.start_rect, self.end_rect, len(self.rectid_arr), blacklist)
+        if self.algo_menu.text.get() == "DFS":
+            path = Pathfinding.search_depth(self.start_rect, self.end_rect, len(self.rectid_arr), blacklist)
+        
         for rect in path:
             if self.is_searching == False: # if clear is pressed or obstacles are changed, stop adding blue rects                    
                 break
             
             self.canvas.itemconfig(rect, fill="blue")
             self.update()
-            time.sleep(0.01)
+            time.sleep(self.speed_slider.get())
 
         self.is_searching = False
-        self.start_button.config(text="START")
 
     def run(self) -> None:
         super().mainloop()
